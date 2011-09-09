@@ -23,26 +23,26 @@ Examples
 py-command can be used to launch processes:
 
     $ python main.py
-    \* recording
+    * recording
     [===        ]
     <say "open firefox">
-    \* done recording
+    * done recording
     <Firefox opens (if successfully understood!)>
 
 Or to do some math:
 
     $ python main.py
-    \* recording
+    * recording
     [===        ]
     <say "calcuate three times four">
-    \* done recording
+    * done recording
     12
 
 Or to lock the screen:
 
     $ python main.py
-    \* recording
+    * recording
     [===        ]
     <say "lock screen">
-    \* done recording
+    * done recording
     <Screen is locked>
