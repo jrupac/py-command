@@ -88,7 +88,7 @@ def main():
         import time
         time.sleep(2)
     else:
-        ProcessText.process_text(err, json.loads(resp)['hypotheses'][0].values())
+        ProcessText.process_text(json.loads(resp)['hypotheses'][0].values())
 
 if __name__ == '__main__':
     atexit.register(clean_up)

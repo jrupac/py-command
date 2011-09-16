@@ -18,7 +18,7 @@ def process_text(values):
             os.system('nightly')
         # Chrome
         elif t == 'chrome':
-            os.system('google-chrome')
+            os.system('google-chrome 2>/dev/null')
         elif t == 'chromium':
             os.system('chromium-browser')
         # Gnome-Terminal
