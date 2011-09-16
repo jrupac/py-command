@@ -1,11 +1,15 @@
+#!/usr/bin/env python
+
 import alsaaudio
 import wave
-import os
 import simplejson as json
 import subprocess
 import httplib
+import os
+import atexit
 
-from Loader import Loader
+import Loader
+import ProcessText
 
 CHUNK = 1024
 CHANNELS = 1
@@ -17,36 +21,46 @@ FLAC_OUTPUT_FILENAME = 'recording.flac'
 HTTP_API_BASE = 'google.com'
 HTTP_API_CALL = '/speech-api/v1/recognize?lang=en-us&client=chromium'
 
-def send_recv(host, selector, filename):
-    body = open(filename, 'rb').read()
-    h = httplib.HTTP(host)
-    h.putrequest('POST', selector)
+def clean_up():
+    ''' Clean up, clean up, everybody do your share '''
+    os.remove(FLAC_OUTPUT_FILENAME)
+
+def send_recv():
+    ''' Encode, send, and receive FLAC file '''
+    body = open(FLAC_OUTPUT_FILENAME, 'rb').read()
+    h = httplib.HTTP(HTTP_API_BASE)
+    h.putrequest('POST', HTTP_API_CALL)
     h.putheader('content-type', 'audio/x-flac; rate=16000')
     h.putheader('content-length', str(len(body)))
     h.endheaders()
     h.send(body)
-    errcode, errmsg, headers = h.getreply()
+    errcode, _, _ = h.getreply()
     return errcode, h.file.read()
 
-def setup_mic():
-    inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NORMAL)
-    inp.setchannels(1)
-    inp.setrate(16000)
-    inp.setformat(alsaaudio.PCM_FORMAT_S16_LE)
-    inp.setperiodsize(CHUNK)
-    return inp
+def capture_audio(loader):
+    ''' Set up mic, capture audio, and return string of the result '''
+    def setup_mic():
+        inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NORMAL)
+        inp.setchannels(CHANNELS)
+        inp.setrate(RATE)
+        inp.setformat(alsaaudio.PCM_FORMAT_S16_LE)
+        inp.setperiodsize(CHUNK)
+        return inp
 
-def capture_audio(inp, loader):
+    inp = setup_mic()
     sound = []
+
     print "* recording\n"
     for i in xrange(0, RATE / CHUNK * RECORD_SECONDS):
         loader(i)
         _, data = inp.read()
         sound.append(data)
-    print "* done recording"
-    return sound
+    print "* done recording\n"
+
+    return ''.join(sound)
 
 def write_wav(data):
+    ''' Write string of data to WAV file of specified name '''
     wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
     wf.setnchannels(CHANNELS)
     wf.setsampwidth(2)
@@ -54,43 +68,28 @@ def write_wav(data):
     wf.writeframes(data)
     wf.close()
 
-def process_text(values):
-    confidence, text = values
-    print 'result is: \'', text, '\' with confidence', confidence
-
-    # Open a process 
-    if text.startswith('open'):
-        os.system(text[text.index('open ')+5:])
-    # Compute a product or sum
-    elif text.startswith('calculate '):
-        os.system('echo \"' + text[text.index('calculate ')+10:] + '\" | bc')
-    # Lock the screen
-    elif text == 'lock screen':
-        subprocess.call(['rm', FLAC_OUTPUT_FILENAME])
-        os.system('gnome-screensaver-command -l')
-        exit()
-
 def main():
-    loader = Loader(SLEEP_TIME * RECORD_SECONDS, 2)
-    
-    write_wav(''.join(capture_audio(setup_mic(), loader)))
+    ''' Run through process of getting, converting, sending/receiving, and 
+        processing data '''
+
+    # First capture audio and write to WAV file
+    write_wav(capture_audio(Loader.Loader(SLEEP_TIME * RECORD_SECONDS, 2)))
    
-    # Convert to FLAC
+    # Then convert to FLAC
     subprocess.call(['flac', '-f', '-s', '--sample-rate=' + str(RATE), 
                     '--delete-input-file', WAVE_OUTPUT_FILENAME])
     
     # Send and receive translation
-    err, resp = send_recv(HTTP_API_BASE, HTTP_API_CALL, FLAC_OUTPUT_FILENAME)
+    err, resp = send_recv()
 
-    # Could not find any match
+    # Analyze results
     if err is not 200:
         print 'No results.'
-        exit()
-        
-    process_text(json.loads(resp)['hypotheses'][0].values())
-
-    subprocess.call(['rm', FLAC_OUTPUT_FILENAME])
+        import time
+        time.sleep(2)
+    else:
+        ProcessText.process_text(err, json.loads(resp)['hypotheses'][0].values())
 
 if __name__ == '__main__':
+    atexit.register(clean_up)
     main()
-

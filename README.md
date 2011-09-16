@@ -11,6 +11,8 @@ Dependencies
 This program depends on [alsaaudio](http://pyalsaaudio.sourceforge.net/pyalsaaudio.html) 
 and is designed to run on Linux. 
 
+Tested on Ubuntu 11.04 in Gnome-Terminal.
+
 Execution
 =========
 
@@ -27,7 +29,7 @@ py-command can be used to launch processes:
     [===        ]
     <say "open firefox">
     * done recording
-    <Firefox opens (if successfully understood!)>
+    <Firefox opens>
 
 Or to do some math:
 
