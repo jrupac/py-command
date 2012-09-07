@@ -1,3 +1,9 @@
+NOTE
+====
+
+**This application is just for fun and should not be used in any way that violates Google's Terms of Services. Do NOT rely on this API for any "real" application if you know what's good for you.**
+
+------------
 Introduction
 ============
 
